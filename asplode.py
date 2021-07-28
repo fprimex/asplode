@@ -36,7 +36,8 @@ def asplode(name, verbose=False, cd="."):
     if verbose:
         print(f' Extracting {name}')
 
-    base, ext = m.groups()
+    basepath, ext = m.groups()
+    basename = os.path.basename(basepath)
 
     try:
         if ext == 'zip':
@@ -54,7 +55,7 @@ def asplode(name, verbose=False, cd="."):
         extract_dir = datetime.datetime.now().isoformat()
         if ext == 'gz':
             os.makedirs(extract_dir)
-            f = open(os.path.join(extract_dir, base), 'wb')
+            f = open(os.path.join(extract_dir, basename), 'wb')
             chunk = 1024*8
             buff = cfile.read(chunk)
             while buff:
@@ -75,7 +76,7 @@ def asplode(name, verbose=False, cd="."):
 
     try:
         extract_files = os.listdir(extract_dir)
-        if len(extract_files) == 1 and extract_files[0] == base:
+        if len(extract_files) == 1 and extract_files[0] == basename:
             # If there's only one file/dir in the dir, and that file/dir
             # matches the base name of the archive, move the file/dir back one
             # into the parent dir and remove the extract directory.
@@ -92,10 +93,10 @@ def asplode(name, verbose=False, cd="."):
             # The 'barfing files all over pwd' case, the 'archive contains
             # var/log/blah/blah' case, and the 'archive contains a single,
             # differently named file' case.
-            shutil.move(os.path.join(extract_dir), base)
+            shutil.move(os.path.join(extract_dir), basename)
 
             # Set the name of the extracted dir for recursive decompression
-            extract_dir = base
+            extract_dir = basepath
     except shutil.Error as e:
         print(' Error arranging directories:')
         print(' ' + e)
