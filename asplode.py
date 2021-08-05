@@ -5,39 +5,45 @@ import datetime
 import re
 import shutil
 from zipfile import ZipFile, BadZipfile
+from pathlib import Path
+
 
 import plac
 
 
 # plac annotation format
 # arg = (help, kind, abbrev, type, choices, metavar)
-@plac.annotations(name =    ("Path to the archive file",
-                             "positional", None, str, None, "ARCHIVE"))
+@plac.annotations(cd =      ("Directory to change to before extraction, ala tar",
+                             "option", "C", None, Path, "DIR"))
 @plac.annotations(verbose = ("Enable verbose output",
                              "flag", "v", None, None, None))
-@plac.annotations(cd =      ("Directory to change to before extraction, ala tar",
-                             "option", "C", None, str, "DIRECTORY"))
-def asplode(name, verbose=False, cd="."):
-    name = os.path.abspath(name)
-    start_dir = os.path.abspath(cd)
+@plac.annotations(name =    ("Path to the archive file",
+                             "positional", None, Path, None, "ARCHIVE"))
+def asplode(name, verbose=False, cd=Path(".")):
+    raw_exts = r'zip|tar|tgz|tar\.gz|tar\.bz2|tar\.bz|gz'
+    archive_exts = set(raw_exts.replace("\\", "").split("|"))
 
-    if not os.path.isfile(name):
+    start_dir = Path(".").absolute()
+    name = Path(name)
+
+    if not name.is_file():
         return 1
 
     # Match on the filename
     # [base].[ext]
     # where ext is one of zip, tar, gz, tgz, tar.gz, or tar.bz2
-    m = re.match(
-        r'^(?P<base>.*?)[.](?P<ext>zip|tar|tgz|tar\.gz|tar\.bz2|tar\.bz|gz)$', name)
+    m = re.match(r'^(?P<base>.*?)[.](?P<ext>' + raw_exts + r')$',
+                 str(name.absolute()))
+
     if not m:
         # Not a compressed file that we're going to try to extract
         return 1
 
     if verbose:
-        print(f' Extracting {name}')
+        print(f' Extracting {name.name}')
 
-    basepath, ext = m.groups()
-    basename = os.path.basename(basepath)
+    basepath = Path(m.groups()[0])
+    ext = m.groups()[1]
 
     try:
         if ext == 'zip':
@@ -52,10 +58,10 @@ def asplode(name, verbose=False, cd="."):
 
     try:
         # extract to a dir of its own to start with.
-        extract_dir = datetime.datetime.now().isoformat()
+        extract_dir = Path(datetime.datetime.now().isoformat())
         if ext == 'gz':
-            os.makedirs(extract_dir)
-            f = open(os.path.join(extract_dir, basename), 'wb')
+            extract_dir.mkdir()
+            f = open(extract_dir / basepath.name, 'wb')
             chunk = 1024*8
             buff = cfile.read(chunk)
             while buff:
@@ -63,7 +69,7 @@ def asplode(name, verbose=False, cd="."):
                 buff = cfile.read(chunk)
             f.close()
         else:
-            cfile.extractall(extract_dir)
+            cfile.extractall(extract_dir.name)
     except OSError:
         print(f' Error extracting {name}')
         return
@@ -71,18 +77,18 @@ def asplode(name, verbose=False, cd="."):
         cfile.close()
 
     # If there's no directory at all, then it was probably an empty archive
-    if not os.path.isdir(extract_dir):
+    if not extract_dir.is_dir():
         return
 
     try:
-        extract_files = os.listdir(extract_dir)
-        if len(extract_files) == 1 and extract_files[0] == basename:
+        extract_files = list(extract_dir.glob("**"))
+        if len(extract_files) == 1 and extract_files[0] == basepath.name:
             # If there's only one file/dir in the dir, and that file/dir
             # matches the base name of the archive, move the file/dir back one
             # into the parent dir and remove the extract directory.
             # The classic tar.gz -> dir and txt.gz -> file cases.
-            shutil.move(os.path.join(extract_dir, extract_files[0]), start_dir)
-            shutil.rmtree(extract_dir)
+            shutil.move(extract_dir / extract_files[0], str(start_dir))
+            shutil.rmtree(extract_dir.name)
 
             # Set the name of the extracted dir for recursive decompression
             extract_dir = extract_files[0]
@@ -93,7 +99,7 @@ def asplode(name, verbose=False, cd="."):
             # The 'barfing files all over pwd' case, the 'archive contains
             # var/log/blah/blah' case, and the 'archive contains a single,
             # differently named file' case.
-            shutil.move(os.path.join(extract_dir), basename)
+            shutil.move(extract_dir.name, basepath.name)
 
             # Set the name of the extracted dir for recursive decompression
             extract_dir = basepath
@@ -103,17 +109,24 @@ def asplode(name, verbose=False, cd="."):
         return
 
     # See if there's anything left to do
-    if not os.path.isdir(extract_dir):
+    if not extract_dir.is_dir():
         return
 
-    # Get a list of files for recursive decompression
-    sub_files = os.listdir(extract_dir)
+    # Get a list of files for recursive decompression.
+    # Right now, to be compatible with the one that used to ship with zdgrab,
+    # this only looks at the results one directory deep. Later I'll add true
+    # recursive searching, but I think more options to include/exclude things
+    # need to be added at the same time as that feature.
+    sub_files = []
+    for path in extract_dir.glob(r'*'):
+        if path.suffix[1:] in archive_exts:
+            sub_files.append(path)
 
     # Extract anything compressed that this archive had in it.
     os.chdir(extract_dir)
     for sub_file in sub_files:
         asplode(sub_file)
-    os.chdir(start_dir)
+    os.chdir(str(start_dir))
 
 
 def main(argv=None):
