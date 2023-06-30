@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="asplode",
-    version="0.1.0",
+    version="1.0.0",
     description="Recursively decompress archives",
     long_description="Recursively decompress archives",
     classifiers=[
