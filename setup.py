@@ -2,11 +2,11 @@ from setuptools import setup
 
 setup(
     name="asplode",
-    version="0.0.5",
+    version="0.1.0",
     description="Recursively decompress archives",
     long_description="Recursively decompress archives",
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: End Users/Desktop",
         "License :: OSI Approved :: Apache Software License",
         "Topic :: Utilities",
