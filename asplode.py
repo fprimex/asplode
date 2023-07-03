@@ -91,7 +91,7 @@ def asplode(name, verbose=False, cd=Path("."), level=0):
             # If there's only one file/dir in the dir, move the file/dir back
             # one into the parent dir and remove the extract directory.  The
             # classic tar.gz -> dir and txt.gz -> file cases.
-            shutil.move(extract_files[0], str(start_dir))
+            shutil.move(str(extract_files[0]), str(start_dir))
             shutil.rmtree(extract_dir.name)
 
             # Set the name of the extracted dir for recursive decompression
@@ -101,7 +101,7 @@ def asplode(name, verbose=False, cd=Path("."), level=0):
             # to the basename of the archive. The 'barfing files all over pwd'
             # case, the 'archive contains usr/bin and var/log/blah/blah and
             # etc' case.
-            shutil.move(extract_dir.name, basepath.name)
+            shutil.move(str(extract_dir), basepath.name)
 
             # Set the name of the extracted dir for recursive decompression
             extract_dir = basepath
