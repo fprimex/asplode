@@ -1,3 +1,7 @@
+## 1.0.2
+
+* Fix exception not being handled as a string
+
 ## 1.0.1
 
 * Support Python 3.8 by ensuring that all paths passed to shutil are strings and not pathlib paths

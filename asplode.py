@@ -107,7 +107,7 @@ def asplode(name, verbose=False, cd=Path("."), level=0):
             extract_dir = basepath
     except shutil.Error as e:
         print(' Error arranging directories:')
-        print(' ' + e)
+        print('  ' + str(e))
         return
 
     # See if there's anything left to do
